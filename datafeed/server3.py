@@ -18,6 +18,13 @@
 #  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 #  DEALINGS IN THE SOFTWARE.
 
+"""
+Qiuying's Note:
+Run /Library/Frameworks/Python.framework/Versions/3.11/bin/python3 datafeed/server3.py
+Instead of python datafeed/server3.py
+to avoid version conflicts
+"""
+
 # from itertools import izip
 from random import normalvariate, random
 from datetime import timedelta, datetime
