@@ -1,0 +1,131 @@
+From 12603a2ef6fe15ddf00a8e0013880e4e0c8d2520 Mon Sep 17 00:00:00 2001
+From: z-q-ying <z.qiuying@outlook.com>
+Date: Sun, 3 Sep 2023 15:27:52 -0700
+Subject: [PATCH] Implemented Task 2: Integrated JPMorgan Chase's Perspective
+ tool for visualizing stock data and alerts
+
+---
+ datafeed/server3.py |  7 +++++++
+ src/App.tsx         | 35 +++++++++++++++++++++++++++--------
+ src/Graph.tsx       | 11 ++++++++---
+ 3 files changed, 42 insertions(+), 11 deletions(-)
+
+diff --git a/datafeed/server3.py b/datafeed/server3.py
+index 68f4659..a573a02 100644
+--- a/datafeed/server3.py
++++ b/datafeed/server3.py
+@@ -18,6 +18,13 @@
+ #  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ #  DEALINGS IN THE SOFTWARE.
+ 
++"""
++Qiuying's Note:
++Run /Library/Frameworks/Python.framework/Versions/3.11/bin/python3 datafeed/server3.py
++Instead of python datafeed/server3.py
++to avoid version conflicts
++"""
++
+ # from itertools import izip
+ from random import normalvariate, random
+ from datetime import timedelta, datetime
+diff --git a/src/App.tsx b/src/App.tsx
+index 0728518..61ccfff 100755
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -5,9 +5,12 @@ import './App.css';
+ 
+ /**
+  * State declaration for <App />
++ * Whenever a type of IState is used, our application knows,
++ * it should always have data and showGraph as properties in order to be valid.
+  */
+ interface IState {
+   data: ServerRespond[],
++  showGraph: boolean,
+ }
+ 
+ /**
+@@ -22,25 +25,41 @@ class App extends Component<{}, IState> {
+       // data saves the server responds.
+       // We use this state to parse data down to the child element (Graph) as element property
+       data: [],
++      showGraph: false  // show upon user click only
+     };
+   }
+ 
+   /**
+-   * Render Graph react component with state.data parse as property data
++   * Render Graph react component with state.data parse as property data.
++   * Ensure that the graph doesn’t render until a user clicks the ‘Start Streaming’ button
+    */
+   renderGraph() {
+-    return (<Graph data={this.state.data}/>)
++    if (this.state.showGraph) {
++      return (<Graph data={this.state.data}/>)
++    }
+   }
+ 
+   /**
+-   * Get new data from server and update the state with the new data
++   * Get new data from server and update the state with the new data.
++   * Javascript has a way to do things in intervals via the setInterval function.
++   * Syntax: setInterval(func, delay)
+    */
+   getDataFromServer() {
+-    DataStreamer.getData((serverResponds: ServerRespond[]) => {
+-      // Update the state by creating a new array of data that consists of
+-      // Previous data in the state and the new data from server
+-      this.setState({ data: [...this.state.data, ...serverResponds] });
+-    });
++    let x = 0;
++    const interval = setInterval(()=>{
++      DataStreamer.getData((serverResponds: ServerRespond[]) => {
++        // Update the state by creating a new array of data that consists of
++        // Previous data in the state and the new data from server
++        this.setState({
++          data: serverResponds,
++          showGraph: true
++        });
++      });
++      x++;
++      if (x > 1000) {
++        clearInterval(interval)
++      }
++    }, 100);
+   }
+ 
+   /**
+diff --git a/src/Graph.tsx b/src/Graph.tsx
+index 3b2a7da..758bf62 100644
+--- a/src/Graph.tsx
++++ b/src/Graph.tsx
+@@ -13,8 +13,9 @@ interface IProps {
+ /**
+  * Perspective library adds load to HTMLElement prototype.
+  * This interface acts as a wrapper for Typescript compiler.
++ * Inheritance enables the `PerspectiveViewerElement` to behave like an HTMLElement.
+  */
+-interface PerspectiveViewerElement {
++interface PerspectiveViewerElement extends HTMLElement {
+   load: (table: Table) => void,
+ }
+ 
+@@ -46,9 +47,13 @@ class Graph extends Component<IProps, {}> {
+     }
+     if (this.table) {
+       // Load the `table` in the `<perspective-viewer>` DOM reference.
+-
+-      // Add more Perspective configurations here.
+       elem.load(this.table);
++      // Add more Perspective configurations here.
++      elem.setAttribute("view", "y_line"); // Since we want a continuous line graph we’re using a y_line here
++      elem.setAttribute("column-pivots", '["stock"]'); // Allow us to distinguish stock ABC from DEF
++      elem.setAttribute("row_pivots", '["timestamp"]'); // Allow us to map each datapoint based on its timestamp
++      elem.setAttribute("columns", '["top_ask_price"]'); // Only the top_ask_price DP to display
++      elem.setAttribute("aggregates",'{"stock":"distinct_count", "top_ask_price":"avg", "top_bid_price":"avg", "timestamp":"distinct_count"}'); // Handle duplicate DPs
+     }
+   }
+ 
+-- 
+2.39.2 (Apple Git-143)
+
